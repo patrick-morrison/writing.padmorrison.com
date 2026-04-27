@@ -1,0 +1,15 @@
+{
+  "name": "writing.padmorrison.com",
+  "version": "1.0.0",
+  "private": false,
+  "scripts": {
+    "export": "gssg --domain https://writing.padmorrison.com --url https://writing.padmorrison.com --dest public; node scripts/postprocess.mjs",
+    "audit": "node scripts/audit-preservation.mjs && node scripts/audit-links.mjs",
+    "audit:preservation": "node scripts/audit-preservation.mjs",
+    "audit:links": "node scripts/audit-links.mjs",
+    "serve": "npx http-server public -p 8080"
+  },
+  "devDependencies": {
+    "ghost-static-site-generator": "^1.1.4"
+  }
+}
