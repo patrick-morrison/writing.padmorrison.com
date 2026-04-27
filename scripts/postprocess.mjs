@@ -7,6 +7,7 @@ const publicDir = path.resolve("public");
 const textFilePattern = /\.(html|xml|xsl|txt)$/i;
 const lightboxCssPath = "/assets/preservation-lightbox.css";
 const lightboxJsPath = "/assets/preservation-lightbox.js";
+const umamiScriptTag = '<script defer src="https://umami.padmorrison.com/script.js" data-website-id="b5af6a98-c866-4a37-9b39-3537af374045"></script>';
 
 async function walk(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -171,7 +172,6 @@ async function removeDynamicGhostIntegrations() {
     const content = await readFile(file, "utf8");
     const cleaned = content
       .replace(/<script\b[^>]+src="https:\/\/cdn\.jsdelivr\.net\/ghost\/(?:portal|sodo-search|comments-ui)[^"]*"[^>]*><\/script>/g, "")
-      .replace(/<script\b[^>]+src="https:\/\/umami\.padmorrison\.com\/script\.js"[^>]*><\/script>/g, "")
       .replace(/<script\b[^>]+data-ghost-comments-counts-api="[^"]*"[^>]*>\s*<\/script>/g, "")
       .replace(/<script\b[^>]+data-ghost-comment-count="[^"]*"[^>]*>\s*<\/script>/g, "")
       .replace(/<script\b[^>]+src="\/public\/member-attribution\.min\.js[^"]*"[^>]*><\/script>/g, "")
@@ -182,6 +182,21 @@ async function removeDynamicGhostIntegrations() {
     if (cleaned !== content) {
       await writeFile(file, cleaned);
     }
+  }
+}
+
+async function injectUmamiScript() {
+  const htmlFiles = (await walk(publicDir)).filter((file) => file.endsWith(".html"));
+
+  for (const file of htmlFiles) {
+    let content = await readFile(file, "utf8");
+
+    if (content.includes("https://umami.padmorrison.com/script.js") || !content.includes("</head>")) {
+      continue;
+    }
+
+    content = content.replace("</head>", `${umamiScriptTag}\n</head>`);
+    await writeFile(file, content);
   }
 }
 
@@ -525,6 +540,7 @@ await linkContentImagesToOriginals();
 await removeDynamicGhostIntegrations();
 await localizeStaticAssets();
 await removeVestigialStaticUi();
+await injectUmamiScript();
 await writeLightboxAssets();
 await injectLightboxAssets();
 await writeHeaders();
