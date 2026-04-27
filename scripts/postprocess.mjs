@@ -8,6 +8,60 @@ const textFilePattern = /\.(html|xml|xsl|txt)$/i;
 const lightboxCssPath = "/assets/preservation-lightbox.css";
 const lightboxJsPath = "/assets/preservation-lightbox.js";
 const umamiScriptTag = '<script defer src="https://umami.padmorrison.com/script.js" data-website-id="b5af6a98-c866-4a37-9b39-3537af374045"></script>';
+const headerActionLinks = [
+  '<a class="gh-head-btn gh-btn" href="https://padmorrison.com" rel="me">padmorrison.com</a>',
+  '<a class="gh-head-btn gh-btn gh-outline-btn" href="https://vis.report/">vis.report</a>',
+].join("\n                    ");
+const seoMetadataOverrides = new Map([
+  [
+    "/",
+    {
+      title: "Patrick Morrison - Underwater Perth Snorkelling and Diving",
+      description: "Underwater Perth snorkelling and diving guides, including Coogee shipwreck, Mettams Pool, Cottesloe Beach, Rottnest Island and local dive sites.",
+      keywords: "Underwater Perth, Perth snorkelling, Perth diving, Coogee shipwreck, Mettams Pool, Cottesloe Beach, Rottnest Island",
+    },
+  ],
+  [
+    "/tag/underwater-perth/",
+    {
+      title: "Underwater Perth Snorkelling and Diving Guide",
+      description: "A guide to snorkelling and diving around Perth, including Coogee shipwreck, Mettams Pool, Cottesloe Beach, Rottnest Island and Swan River wrecks.",
+      keywords: "Underwater Perth, Perth snorkelling, Perth diving, Coogee shipwreck, Mettams Pool, Cottesloe Beach, Rottnest Island, Swan River wrecks",
+    },
+  ],
+  [
+    "/intro-to-shipwrecks/",
+    {
+      title: "Coogee Omeo Shipwreck Snorkel and North Mole Wreck Dive",
+      description: "Guide to snorkelling the Omeo shipwreck at Coogee Maritime Trail and diving or freediving the North Mole wreck near Fremantle, Perth.",
+      keywords: "Coogee shipwreck, Omeo shipwreck, Coogee Maritime Trail, North Mole wreck, Perth snorkelling, Perth diving",
+    },
+  ],
+  [
+    "/creatures/",
+    {
+      title: "Mettams Pool Snorkelling and Ammo Jetty Sea Creatures",
+      description: "Guide to Mettams Pool snorkelling and Ammo Jetty diving, with octopus, seahorses, squid and other Perth sea creatures.",
+      keywords: "Mettams Pool, Mettams Pool snorkelling, Ammo Jetty, Perth snorkelling, sea creatures, octopus, seahorses",
+    },
+  ],
+  [
+    "/day-at-the-beach/",
+    {
+      title: "Cottesloe Beach Snorkelling and Point Peron Diving",
+      description: "Snorkelling Cottesloe Beach reef and diving or snorkelling Point Peron during Bunuru, with Perth beach conditions and underwater caves.",
+      keywords: "Cottesloe Beach snorkelling, Cottesloe snorkelling, Point Peron diving, Perth snorkelling, Perth beach snorkel",
+    },
+  ],
+  [
+    "/rottnest-limestone/",
+    {
+      title: "Rottnest Island Diving and Little Salmon Bay Snorkelling",
+      description: "Guide to Rottnest Island diving and snorkelling at Little Salmon Bay and Roe Reef, with Wadjemup limestone caves, reef and clear water.",
+      keywords: "Rottnest dive, Rottnest Island diving, Little Salmon Bay, Roe Reef, Wadjemup, Rottnest snorkelling",
+    },
+  ],
+]);
 
 async function walk(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -68,6 +122,32 @@ async function fetchExternalToPublic(url, outputPath) {
 function storagePathForUrl(url) {
   const parsed = new URL(url);
   return `/storage.ghost.io${parsed.pathname}`;
+}
+
+function htmlPathForFile(file) {
+  const relativePath = path.relative(publicDir, file).split(path.sep).join("/");
+
+  if (relativePath === "index.html") {
+    return "/";
+  }
+
+  if (relativePath.endsWith("/index.html")) {
+    return `/${relativePath.replace(/\/index\.html$/, "/")}`;
+  }
+
+  return `/${relativePath}`;
+}
+
+function escapeHtmlAttribute(value) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function escapeJsonString(value) {
+  return JSON.stringify(value).slice(1, -1);
 }
 
 function originalStorageUrlFor(url) {
@@ -200,6 +280,51 @@ async function injectUmamiScript() {
   }
 }
 
+async function improveSeoMetadata() {
+  const htmlFiles = (await walk(publicDir)).filter((file) => file.endsWith(".html"));
+
+  for (const file of htmlFiles) {
+    let content = await readFile(file, "utf8");
+    const original = content;
+    const override = seoMetadataOverrides.get(htmlPathForFile(file));
+
+    content = content
+      .replace(/(<meta\s+(?:property|name)="(?:og:image|twitter:image)"\s+content=")\/([^"]+)(")/g, `$1${site}/$2$3`)
+      .replace(/("url":\s*")\/storage\.ghost\.io\//g, `$1${site}/storage.ghost.io/`)
+      .replace(/\s*<meta property="article:publisher" content="https:\/\/www\.facebook\.com\/ghost">\n?/g, "\n");
+
+    if (override) {
+      const title = escapeHtmlAttribute(override.title);
+      const description = escapeHtmlAttribute(override.description);
+      const keywords = escapeJsonString(override.keywords);
+      const jsonTitle = escapeJsonString(override.title);
+      const jsonDescription = escapeJsonString(override.description);
+
+      content = content
+        .replace(/<title>[\s\S]*?<\/title>/, `<title>${title}</title>`)
+        .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${description}">`)
+        .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${title}">`)
+        .replace(/<meta property="og:description" content="[^"]*">/, `<meta property="og:description" content="${description}">`)
+        .replace(/<meta name="twitter:title" content="[^"]*">/, `<meta name="twitter:title" content="${title}">`)
+        .replace(/<meta name="twitter:description" content="[^"]*">/, `<meta name="twitter:description" content="${description}">`)
+        .replace(/("headline":\s*")[^"]*(")/, `$1${jsonTitle}$2`)
+        .replace(/("description":\s*")[^"]*(")/, `$1${jsonDescription}$2`)
+        .replace(/("keywords":\s*")[^"]*(")/, `$1${keywords}$2`);
+    }
+
+    if (!content.includes('<meta name="robots"')) {
+      content = content.replace(
+        '<meta name="referrer" content="no-referrer-when-downgrade">',
+        '<meta name="referrer" content="no-referrer-when-downgrade">\n    <meta name="robots" content="max-image-preview:large">',
+      );
+    }
+
+    if (content !== original) {
+      await writeFile(file, content);
+    }
+  }
+}
+
 async function localizeStaticAssets() {
   const textFiles = (await walk(publicDir)).filter((file) => textFilePattern.test(file));
 
@@ -246,6 +371,28 @@ async function removeVestigialStaticUi() {
 
     if (cleaned !== content) {
       await writeFile(file, cleaned);
+    }
+  }
+}
+
+async function improveStaticHeader() {
+  const htmlFiles = (await walk(publicDir)).filter((file) => file.endsWith(".html"));
+
+  for (const file of htmlFiles) {
+    const content = await readFile(file, "utf8");
+    let improved = content
+      .replace(/\n\s*<li class="nav-padmorrison-com"><a href="https:\/\/padmorrison\.com">padmorrison\.com<\/a><\/li>/g, "")
+      .replace(/\n\s*<li class="nav-vis-report"><a href="https:\/\/vis\.report\/">vis\.report<\/a><\/li>/g, "");
+
+    improved = improved.replace(
+      /<div class="gh-head-actions">\s*(?:<a class="gh-head-btn gh-btn" href="https:\/\/padmorrison\.com" rel="me">padmorrison\.com<\/a>\s*<a class="gh-head-btn gh-btn gh-outline-btn" href="https:\/\/vis\.report\/">vis\.report<\/a>)?\s*<\/div>/g,
+      `<div class="gh-head-actions">
+                    ${headerActionLinks}
+            </div>`,
+    );
+
+    if (improved !== content) {
+      await writeFile(file, improved);
     }
   }
 }
@@ -540,6 +687,8 @@ await linkContentImagesToOriginals();
 await removeDynamicGhostIntegrations();
 await localizeStaticAssets();
 await removeVestigialStaticUi();
+await improveStaticHeader();
+await improveSeoMetadata();
 await injectUmamiScript();
 await writeLightboxAssets();
 await injectLightboxAssets();
