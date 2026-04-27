@@ -9,8 +9,8 @@ const lightboxCssPath = "/assets/preservation-lightbox.css";
 const lightboxJsPath = "/assets/preservation-lightbox.js";
 const umamiScriptTag = '<script defer src="https://umami.padmorrison.com/script.js" data-website-id="b5af6a98-c866-4a37-9b39-3537af374045"></script>';
 const headerActionLinks = [
-  '<a class="gh-head-btn gh-btn" href="https://padmorrison.com" rel="me">padmorrison.com</a>',
   '<a class="gh-head-btn gh-btn gh-outline-btn" href="https://vis.report/">vis.report</a>',
+  '<a class="gh-head-btn gh-btn" href="https://padmorrison.com" rel="me">padmorrison.com</a>',
 ].join("\n                    ");
 const seoMetadataOverrides = new Map([
   [
@@ -385,7 +385,7 @@ async function improveStaticHeader() {
       .replace(/\n\s*<li class="nav-vis-report"><a href="https:\/\/vis\.report\/">vis\.report<\/a><\/li>/g, "");
 
     improved = improved.replace(
-      /<div class="gh-head-actions">\s*(?:<a class="gh-head-btn gh-btn" href="https:\/\/padmorrison\.com" rel="me">padmorrison\.com<\/a>\s*<a class="gh-head-btn gh-btn gh-outline-btn" href="https:\/\/vis\.report\/">vis\.report<\/a>)?\s*<\/div>/g,
+      /<div class="gh-head-actions">\s*(?:<a class="gh-head-btn gh-btn" href="https:\/\/padmorrison\.com" rel="me">padmorrison\.com<\/a>\s*<a class="gh-head-btn gh-btn gh-outline-btn" href="https:\/\/vis\.report\/">vis\.report<\/a>|<a class="gh-head-btn gh-btn gh-outline-btn" href="https:\/\/vis\.report\/">vis\.report<\/a>\s*<a class="gh-head-btn gh-btn" href="https:\/\/padmorrison\.com" rel="me">padmorrison\.com<\/a>)?\s*<\/div>/g,
       `<div class="gh-head-actions">
                     ${headerActionLinks}
             </div>`,
