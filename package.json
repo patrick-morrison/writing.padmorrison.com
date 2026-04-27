@@ -4,6 +4,7 @@
   "private": false,
   "scripts": {
     "export": "gssg --domain https://writing.padmorrison.com --url https://writing.padmorrison.com --dest public; node scripts/postprocess.mjs",
+    "export:llms": "node scripts/export-llms.mjs",
     "audit": "node scripts/audit-preservation.mjs && node scripts/audit-links.mjs",
     "audit:preservation": "node scripts/audit-preservation.mjs",
     "audit:links": "node scripts/audit-links.mjs",
